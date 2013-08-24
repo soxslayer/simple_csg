@@ -11,9 +11,15 @@ using namespace std;
 
 int main (int argc, char** argv)
 {
-  float triangle[] = {
+  float t1[] = {
     0.75, 0.75, 0.0, 1.0,
     0.75, -0.75, 0.0, 1.0,
+    -0.75, -0.75, 0.0, 1.0
+  };
+
+  float t2[] = {
+    -0.75, 0.75, 0.0, 1.0,
+    0.75, 0.75, 0.0, 1.0,
     -0.75, -0.75, 0.0, 1.0
   };
 
@@ -46,14 +52,19 @@ int main (int argc, char** argv)
   gpu.set_shader (s);
   gpu.set_clear_color (0.0, 1.0, 1.0, 0.0);
 
-  GUI::GPUPipeline::VertexBuffer vbo;
-  vbo.alloc (triangle, sizeof (triangle));
+  GUI::GPUPipeline::VertexBuffer vbo1;
+  vbo1.alloc (t1, sizeof (t1));
+
+  GUI::GPUPipeline::VertexBuffer vbo2;
+  vbo2.alloc (t2, sizeof (t2));
 
   const GUI::Shader::InputDef* pos_input = s.get_input ("vertex");
-  gpu.bind_shader_input (vbo, *pos_input, 0, 0);
 
   while (!glfwWindowShouldClose (window)) {
     gpu.clear ();
+    gpu.bind_shader_input (vbo1, *pos_input, 0, 0);
+    gpu.draw (GL_TRIANGLES, 3);
+    gpu.bind_shader_input (vbo2, *pos_input, 0, 0);
     gpu.draw (GL_TRIANGLES, 3);
     glfwSwapBuffers (window);
 

@@ -138,7 +138,10 @@ void GPUPipeline::draw (GLenum mode, GLsizei count) const
   glDrawArrays (mode, 0, count);
 }
 
-
+GPUPipeline::GPUPipeline ()
+  : _clear_r (0.0), _clear_g (0.0), _clear_b (0.0), _clear_a (1.0)
+{
+}
 
 GPUPipeline* GPUPipeline::_instance = nullptr;
 

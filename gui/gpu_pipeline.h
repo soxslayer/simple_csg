@@ -43,13 +43,14 @@ public:
   static GPUPipeline& instance ();
 
 private:
-  GPUPipeline () { }
-  GPUPipeline (const GPUPipeline& p) { }
-  const GPUPipeline& operator= (const GPUPipeline& p) { return *this; }
   float _clear_r;
   float _clear_g;
   float _clear_b;
   float _clear_a;
+
+  GPUPipeline ();
+  GPUPipeline (const GPUPipeline& p) { }
+  const GPUPipeline& operator= (const GPUPipeline& p) { return *this; }
 
   static GPUPipeline* _instance;
 };

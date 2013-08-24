@@ -40,7 +40,7 @@ int main (int argc, char** argv)
     return 1;
   }
 
-  GUI::Shader s ("../gui/vertex.glsl", "../gui/fragment.glsl");
+  GUI::Shader s ("../gui/simple.vert", "../gui/simple.frag");
 
   GUI::GPUPipeline& gpu = GUI::GPUPipeline::instance ();
   gpu.set_shader (s);

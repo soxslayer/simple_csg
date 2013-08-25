@@ -8,28 +8,38 @@ using namespace std;
 namespace GUI
 {
 
-GPUPipeline::VertexBuffer::VertexBuffer ()
+GPUPipeline::Buffer::Buffer (GLenum type)
+  : _type (type)
 {
   glGenBuffers (1, &_handle);
 }
 
-GPUPipeline::VertexBuffer::~VertexBuffer ()
+GPUPipeline::Buffer::~Buffer ()
 {
   glDeleteBuffers (1, &_handle);
 }
 
-void GPUPipeline::VertexBuffer::alloc (const void* data, GLsizeiptr size,
+void GPUPipeline::Buffer::alloc (const void* data, GLsizeiptr size,
                                        GLenum usage) const
 {
-  glBindBuffer (GL_ARRAY_BUFFER, _handle);
-  glBufferData (GL_ARRAY_BUFFER, size, data, usage);
-  glBindBuffer (GL_ARRAY_BUFFER, 0);
+  glBindBuffer (_type, _handle);
+  glBufferData (_type, size, data, usage);
 }
 
-void GPUPipeline::VertexBuffer::set (const void* data, GLsizeiptr size,
-                                     GLintptr offset) const
+void GPUPipeline::Buffer::set (const void* data, GLsizeiptr size,
+                               GLintptr offset) const
 {
   glBufferSubData (_handle, offset, size, data);
+}
+
+void GPUPipeline::Buffer::bind () const
+{
+  glBindBuffer (_type, _handle);
+}
+
+void GPUPipeline::Buffer::unbind () const
+{
+  glBindBuffer (_type, 0);
 }
 
 
@@ -56,6 +66,8 @@ void GPUPipeline::clear (float r, float g, float b, float a) const
 
 void GPUPipeline::set_shader (const Shader& shader)
 {
+  _shader_mvp_input = shader.get_input ("mvp_transform");
+
   glUseProgram (shader.get_program ());
 }
 
@@ -121,25 +133,84 @@ void GPUPipeline::bind_shader_input (void *data, const Shader::InputDef& input,
   }
 }
 
-void GPUPipeline::bind_shader_input (const VertexBuffer& buff, 
+void GPUPipeline::bind_shader_input (const Buffer& buff,
                                      const Shader::InputDef& input,
                                      long offset, GLsizei stride) const
 {
   if (input.def_type != Shader::InputDef::ATTRIBUTE)
     throw GPUPipelineInputException (input.name, "invalid type");
 
-  glBindBuffer (GL_ARRAY_BUFFER, buff.get_handle ());
+  buff.bind ();
   bind_shader_input ((void*)offset, input, stride);
-  glBindBuffer (GL_ARRAY_BUFFER, 0);
+  buff.unbind ();
 }
 
-void GPUPipeline::draw (GLenum mode, GLsizei count) const
+void GPUPipeline::draw (GLenum mode, GLsizei count)
 {
+  if (_shader_mvp_input) {
+    calculate_vp_transform ();
+
+    Math::Matrix4 mvp_transform = _m_transform * _vp_transform;
+    bind_shader_input (mvp_transform.data (), *_shader_mvp_input);
+  }
+
   glDrawArrays (mode, 0, count);
 }
 
+void GPUPipeline::draw_elements (GLenum mode, GLsizei count, long offset,
+                                 GLenum type)
+{
+  if (_shader_mvp_input) {
+    calculate_vp_transform ();
+
+    Math::Matrix4 mvp_transform = _m_transform * _vp_transform;
+    bind_shader_input (mvp_transform.data (), *_shader_mvp_input);
+  }
+
+  glDrawElements (mode, count, type, (void*)offset);
+}
+
+void GPUPipeline::push ()
+{
+  _transform_stack.push_back (_m_transform);
+}
+
+void GPUPipeline::pop ()
+{
+  if (_transform_stack.size () > 0) {
+    _m_transform = _transform_stack.back ();
+    _transform_stack.pop_back ();
+  }
+}
+
+void GPUPipeline::set_model_transform (const Math::Matrix4& transform)
+{
+  _m_transform = transform;
+}
+
+void GPUPipeline::set_view_transform (const Math::Matrix4& transform)
+{
+  _v_transform = transform;
+  _vp_dirty = true;
+}
+
+void GPUPipeline::set_projection_transform (const Math::Matrix4& transform)
+{
+  _p_transform = transform;
+  _vp_dirty = true;
+}
+
+void GPUPipeline::calculate_vp_transform ()
+{
+  if (!_vp_dirty) return;
+
+  _vp_transform = _v_transform * _p_transform;
+  _vp_dirty = false;
+}
+
 GPUPipeline::GPUPipeline ()
-  : _clear_r (0.0), _clear_g (0.0), _clear_b (0.0), _clear_a (1.0)
+  : _clear_r (0.0), _clear_g (0.0), _clear_b (0.0), _clear_a (1.0),
+    _vp_dirty (true), _shader_mvp_input (nullptr)
 {
 }
 

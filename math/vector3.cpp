@@ -26,13 +26,6 @@ Vector3::Vector3 (const Vector3& v)
   z = v.z;
 }
 
-void Vector3::reset ()
-{
-  x = 0;
-  y = 0;
-  z = 0;
-}
-
 const Vector3& Vector3::operator= (const Vector3& v)
 {
   x = v.x;
@@ -42,12 +35,24 @@ const Vector3& Vector3::operator= (const Vector3& v)
   return *this;
 }
 
-float Vector3::dot_product (const Vector3& v)
+void Vector3::reset ()
+{
+  x = 0;
+  y = 0;
+  z = 0;
+}
+
+float Vector3::length () const
+{
+  return sqrt (x * x + y * y + z * z);
+}
+
+float Vector3::dot_product (const Vector3& v) const
 {
   return x * v.x + y * v.y + z * v.z;
 }
 
-Vector3 Vector3::cross_product (const Vector3& v)
+Vector3 Vector3::cross_product (const Vector3& v) const
 {
   Vector3 ret;
 
@@ -78,9 +83,13 @@ Vector3 Vector3::normalized () const
   return r;
 }
 
-float Vector3::length () const
+float Vector3::angle_between (const Vector3& v) const
 {
-  return sqrt (x * x + y * y + z * z);
+  float m_l = length ();
+  float v_l = v.length ();
+  float dp = dot_product (v);
+
+  return acosf (dp / m_l / v_l) * 180.0 / M_PI;
 }
 
 const Vector3& Vector3::operator+= (const Vector3& v)
@@ -155,6 +164,11 @@ bool Vector3::operator== (const Vector3& v) const
 bool Vector3::operator!= (const Vector3& v) const
 {
   return !(*this == v);
+}
+
+Vector3 Vector3::operator- () const
+{
+  return Vector3 (-x, -y, -z);
 }
 
 std::ostream& operator<< (std::ostream& s, const Vector3& v)

@@ -32,15 +32,15 @@ Matrix4::Matrix4 (const Quaternion& q)
   float ab = q.w * q.x;
 
   _d[0] = aa + bb - cc - dd;
-  _d[1] = 2 * (bc + ad);
-  _d[2] = 2 * (bd - ac);
+  _d[1] = 2 * (bc - ad);
+  _d[2] = 2 * (bd + ac);
   _d[3] = 0;
-  _d[4] = 2 * (bc - ad);
+  _d[4] = 2 * (bc + ad);
   _d[5] = aa - bb + cc - dd;
-  _d[6] = 2 * (cd + ab);
+  _d[6] = 2 * (cd - ab);
   _d[7] = 0;
-  _d[8] = 2 * (bd + ac);
-  _d[9] = 2 * (cd - ab);
+  _d[8] = 2 * (bd - ac);
+  _d[9] = 2 * (cd + ab);
   _d[10] = aa - bb - cc + dd;
   _d[11] = 0;
   _d[12] = 0;
@@ -85,14 +85,6 @@ Matrix4 Matrix4::operator* (const Matrix4& m) const
 {
   Matrix4 ret = *this;
   return ret *= m;
-}
-
-Vector4 Matrix4::operator* (const Vector4& v) const
-{
-  return Vector4 (_d[0] * v.x + _d[4] * v.y + _d[8] * v.z + _d[12] * v.w,
-                  _d[1] * v.x + _d[5] * v.y + _d[9] * v.z + _d[13] * v.w,
-                  _d[2] * v.x + _d[5] * v.y + _d[10] * v.z + _d[14] * v.w,
-                  _d[3] * v.x + _d[6] * v.y + _d[11] * v.z + _d[15] * v.w);
 }
 
 const Matrix4& Matrix4::translate (const Vector3& v)
@@ -228,15 +220,43 @@ void Matrix4::reset ()
     _d[i] = i % 5 == 0 ? 1 : 0;
 }
 
+void Matrix4::look_at (const Vector3& eye_location,
+                       const Vector3& eye_direction,
+                       const Vector3& up_vector)
+{
+  reset ();
+
+  translate (-eye_location);
+
+  Vector3 axis = eye_direction.cross_product (Vector3::z_axis);
+  float angle = 180 - eye_direction.angle_between (Vector3::z_axis);
+
+  if (angle != 0)
+    rotate (axis, angle);
+
+  angle = up_vector.angle_between (Vector3::y_axis);
+
+  rotate (Vector3::z_axis, -angle);
+}
+
+void Matrix4::ortho_projection (float left, float right, float bottom,
+                                float top, float near, float far)
+{
+  reset ();
+
+  translate (-(left + right) / 2, -(top + bottom) / 2, -(far + near) / 2);
+  scale (2 / (right - left), 2 / (top - bottom), 2 / (far - near));
+}
+
 std::ostream& operator<< (std::ostream& s, const Matrix4& m)
 {
-  s << "[[ " << m[0] << ',' << m[4] << ',' << m[8] << ',' << m[12] << " ]"
+  s << "[[ " << m[0] << ", " << m[1] << ", " << m[2] << ", " << m[3] << " ]"
     << std::endl;
-  s << " [ " << m[1] << ',' << m[5] << ',' << m[9] << ',' << m[13] << " ]"
+  s << " [ " << m[4] << ", " << m[5] << ", " << m[6] << ", " << m[7] << " ]"
     << std::endl;
-  s << " [ " << m[2] << ',' << m[6] << ',' << m[10] << ',' << m[14] << " ]"
+  s << " [ " << m[8] << ", " << m[9] << ", " << m[10] << ", " << m[11] << " ]"
     << std::endl;
-  s << " [ " << m[3] << ',' << m[7] << ',' << m[11] << ','
+  s << " [ " << m[12] << ", " << m[13] << ", " << m[14] << ", "
     << m[15] << " ]]";
 
   return s;

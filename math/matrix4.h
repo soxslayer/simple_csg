@@ -29,7 +29,7 @@ public:
   const Matrix4& operator*= (const Matrix4& m);
 
   Matrix4 operator* (const Matrix4& m) const;
-  Vector4 operator* (const Vector4& v) const;
+  //Vector4 operator* (const Vector4& v) const;
 
   const Matrix4& translate (const Vector3& v);
   const Matrix4& translate (float x, float y, float z);
@@ -48,6 +48,10 @@ public:
   const Matrix4& transpose ();
   Matrix4 transposed () const;
   void reset ();
+  void look_at (const Vector3& eye_location, const Vector3& eye_direction,
+                const Vector3& up_vector);
+  void ortho_projection (float left, float right, float bottom, float top,
+                         float near, float far);
 
   static const Matrix4 identity;
 

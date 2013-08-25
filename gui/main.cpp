@@ -1,8 +1,10 @@
 #include <iostream>
+#include <functional>
 
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <GL/glu.h>
+
+#include "main.h"
+#include "csg/exceptions.h"
 
 #include "shader.h"
 #include "gpu_pipeline.h"
@@ -11,7 +13,53 @@
 
 using namespace std;
 
-int main (int argc, char** argv)
+namespace GUI
+{
+
+SDLContext::~SDLContext ()
+{
+  SDL_Quit ();
+}
+
+SDLContext::SDLContext ()
+{
+  if (SDL_Init (SDL_INIT_VIDEO) < 0)
+    throw CSG::Exception ("SDL failed to init");
+}
+
+SDLContext SDLContext::_context;
+
+
+
+Main::Main (int argc, char** argv)
+  : _run (false)
+{
+  _window = SDL_CreateWindow ("SimpleCSG", SDL_WINDOWPOS_UNDEFINED,
+    SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+  if (!_window)
+    throw CSG::Exception ("Failed to create SDL window");
+
+  _gl_context = SDL_GL_CreateContext (_window);
+
+  SDL_GL_SetSwapInterval (1);
+
+  if (glewInit () != GLEW_OK) {
+    SDL_GL_DeleteContext (_gl_context);
+    SDL_DestroyWindow (_window);
+
+    throw CSG::Exception ("GLEW failed to init");
+  }
+
+  _run = true;
+}
+
+Main::~Main ()
+{
+  SDL_GL_DeleteContext (_gl_context);
+  SDL_DestroyWindow (_window);
+}
+
+void Main::run ()
 {
   float t1[] = {
     1.0, 1.0, 0.0, 1.0,
@@ -25,45 +73,19 @@ int main (int argc, char** argv)
     0, 1, 1, 2, 2, 0, 1, 2, 2, 3, 3, 1
   };
 
-  if (!glfwInit ()) {
-    cerr << "GLFW init failed" << endl;
-    return 1;
-  }
+  Shader shader ("../gui/simple.vert", "../gui/simple.frag");
+  GPUPipeline& gpu = GPUPipeline::instance ();
 
-  GLFWwindow* window = glfwCreateWindow (800, 600, "SimpleCSG", nullptr,
-                                         nullptr);
-  if (!window) {
-    cerr << "GLFW window creation failed" << endl;
-    glfwTerminate ();
+  gpu.set_shader (shader);
 
-    return 1;
-  }
+  GPUPipeline::VertexBuffer vbo;
+  vbo.alloc (t1, sizeof (t1));
 
-  glfwMakeContextCurrent (window);
+  GPUPipeline::ElementBuffer ibo;
+  ibo.alloc (e1, sizeof (e1));
 
-  if (glewInit () != GLEW_OK) {
-    cerr << "GLEW init failed" << endl;
-    glfwTerminate ();
-
-    return 1;
-  }
-
-  GUI::Shader s ("../gui/simple.vert", "../gui/simple.frag");
-
-  GUI::GPUPipeline& gpu = GUI::GPUPipeline::instance ();
-  gpu.set_shader (s);
-
-  GUI::GPUPipeline::VertexBuffer vbo1;
-  vbo1.alloc (t1, sizeof (t1));
-
-  GUI::GPUPipeline::ElementBuffer ibo1;
-  ibo1.alloc (e1, sizeof (e1));
-
-  Math::Matrix4 model1;
-  model1.scale (0.5, 0.5, 0.5);
-
-  Math::Matrix4 model2;
-  model2.translate (-1.0, 0.0, -5.0);
+  Math::Matrix4 model;
+  model.scale (0.5, 0.5, 0.5);
 
   Math::Matrix4 view;
   view.look_at (Math::Vector3 (0.0, 0.0, 5.0),
@@ -71,34 +93,52 @@ int main (int argc, char** argv)
                 Math::Vector3 (0.0, 1.0, 0.0));
   gpu.set_view_transform (view);
 
-  Math::Vector4 color1 (1.0, 0.0, 0.0, 1.0);
-  Math::Vector4 color2 (0.0, 1.0, 0.0, 1.0);
+  Math::Vector4 color (1.0, 0.0, 0.0, 1.0);
 
   Math::Matrix4 proj;
   proj.ortho_projection (-5, 5, -5, 5, -10, 0);
   gpu.set_projection_transform (proj);
 
-  const GUI::Shader::InputDef* pos_input = s.get_input ("vertex");
-  const GUI::Shader::InputDef* color_input = s.get_input ("color");
+  const Shader::InputDef* pos_input = shader.get_input ("vertex");
+  const Shader::InputDef* color_input = shader.get_input ("color");
 
-  while (!glfwWindowShouldClose (window)) {
+  SDL_Event evt;
+
+  while (_run) {
     gpu.clear ();
-    gpu.bind_shader_input (vbo1, *pos_input);
-    gpu.bind_shader_input (color1.data (), *color_input);
-    gpu.set_model_transform (model1);
-    ibo1.bind ();
-    //gpu.draw_elements (GL_TRIANGLES, 6, 0);
+
+    gpu.bind_shader_input (vbo, *pos_input);
+    gpu.bind_shader_input (color.data (), *color_input);
+    ibo.bind ();
+
+    gpu.set_model_transform (model);
+
     gpu.draw_elements (GL_LINES, 12, 0);
     //gpu.draw (GL_TRIANGLES, 6);
-    gpu.bind_shader_input (color2.data (), *color_input);
-    gpu.set_model_transform (model2);
-    //gpu.draw (GL_TRIANGLES, 6);
-    glfwSwapBuffers (window);
 
-    glfwWaitEvents ();
+    SDL_GL_SwapWindow (_window);
+    SDL_WaitEvent (&evt);
+
+    switch (evt.type) {
+      case SDL_QUIT:
+        _run = false;
+        break;
+    }
   }
+}
 
-  glfwTerminate ();
+void Main::handle_keyboard (int key, int scancode, int action, int mods)
+{
+  cout << "Keyboard" << endl;
+}
+
+} /* namespace GUI */
+
+int main (int argc, char** argv)
+{
+  GUI::Main m (argc, argv);
+
+  m.run ();
 
   return 0;
 }

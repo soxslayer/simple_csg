@@ -7,7 +7,7 @@ SRCS+=$(foreach cpp,$(wildcard ../math/*.cpp),$(notdir $(cpp)))
 OBJS:=$(SRCS:.cpp=.o)
 DEPS:=$(SRCS:.cpp=.d)
 
-LINKED_LIBS:=glew glfw3 gl
+LINKED_LIBS:=glew gl sdl2
 
 CXX:=g++
 LD:=g++

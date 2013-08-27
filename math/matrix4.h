@@ -32,8 +32,10 @@ public:
   //Vector4 operator* (const Vector4& v) const;
 
   const Matrix4& translate (const Vector3& v);
+  const Matrix4& translate (const Vector4& v);
   const Matrix4& translate (float x, float y, float z);
   Matrix4 translated (const Vector3& v) const;
+  Matrix4 translated (const Vector4& v) const;
   Matrix4 translated (float x, float y, float z) const;
   const Matrix4& rotate (const Vector3& axis, float angle);
   const Matrix4& rotate (float x, float y, float z, float angle);
@@ -47,6 +49,8 @@ public:
   Matrix4 scaled (float x, float y, float z) const;
   const Matrix4& transpose ();
   Matrix4 transposed () const;
+  const Matrix4& invert ();
+  Matrix4 inverted () const;
   void reset ();
   void look_at (const Vector3& eye_location, const Vector3& eye_direction,
                 const Vector3& up_vector);

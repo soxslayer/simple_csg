@@ -15,6 +15,7 @@ class Quaternion
 public:
   Quaternion ();
   Quaternion (const Vector3& axis, float angle);
+  Quaternion (const Vector4& axis, float angle);
   Quaternion (const Vector4& v);
   const Quaternion& operator= (const Quaternion& q);
 

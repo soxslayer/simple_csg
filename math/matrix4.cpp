@@ -1,6 +1,7 @@
 #include "matrix4.h"
 #include "quaternion.h"
 #include "vector3.h"
+#include "matrix2.h"
 
 namespace Math
 {
@@ -92,6 +93,11 @@ const Matrix4& Matrix4::translate (const Vector3& v)
   return translate (v.x, v.y, v.z);
 }
 
+const Matrix4& Matrix4::translate (const Vector4& v)
+{
+  return translate (v.x, v.y, v.z);
+}
+
 const Matrix4& Matrix4::translate (float x, float y, float z)
 {
   Matrix4 tm;
@@ -106,6 +112,13 @@ const Matrix4& Matrix4::translate (float x, float y, float z)
 }
 
 Matrix4 Matrix4::translated (const Vector3& v) const
+{
+  Matrix4 ret = *this;
+
+  return ret.translate (v);
+}
+
+Matrix4 Matrix4::translated (const Vector4& v) const
 {
   Matrix4 ret = *this;
 
@@ -214,6 +227,61 @@ Matrix4 Matrix4::transposed () const
   return r;
 }
 
+const Matrix4& Matrix4::invert ()
+{
+  /* blockwise inversion */
+  Matrix2 A (_d[0], _d[1], _d[4], _d[5]);
+  Matrix2 B (_d[2], _d[3], _d[6], _d[7]);
+  Matrix2 C (_d[8], _d[9], _d[12], _d[13]);
+  Matrix2 D (_d[10], _d[11], _d[14], _d[15]);
+
+  A.invert ();
+
+  Matrix2 schur = C;
+  schur*= A;
+  schur *= B;
+  schur = D - schur;
+  schur.invert ();
+
+  Matrix2 CA = C;
+  CA *= A;
+
+  Matrix2 AB = A;
+  AB *= B;
+
+  Matrix2 n_A = A + AB * schur * CA;
+  Matrix2 n_B = -AB * schur;
+  Matrix2 n_C = -schur * CA;
+
+  _d[0] = n_A[0];
+  _d[1] = n_A[1];
+  _d[2] = n_B[0];
+  _d[3] = n_B[1];
+  _d[4] = n_A[2];
+  _d[5] = n_A[3];
+  _d[6] = n_B[2];
+  _d[7] = n_B[3];
+  _d[8] = n_C[0];
+  _d[9] = n_C[1];
+  _d[10] = schur[0];
+  _d[11] = schur[1];
+  _d[12] = n_C[2];
+  _d[13] = n_C[3];
+  _d[14] = schur[2];
+  _d[15] = schur[3];
+
+  return *this;
+}
+
+Matrix4 Matrix4::inverted () const
+{
+  Matrix4 r = *this;
+
+  r.invert ();
+
+  return r;
+}
+
 void Matrix4::reset ()
 {
   for (int i = 0; i < 16; ++i)
@@ -247,6 +315,8 @@ void Matrix4::ortho_projection (float left, float right, float bottom,
   translate (-(left + right) / 2, -(top + bottom) / 2, -(far + near) / 2);
   scale (2 / (right - left), 2 / (top - bottom), 2 / (far - near));
 }
+
+
 
 std::ostream& operator<< (std::ostream& s, const Matrix4& m)
 {

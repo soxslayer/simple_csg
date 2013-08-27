@@ -25,6 +25,17 @@ Quaternion::Quaternion (const Vector3& axis, float angle)
   z = axis.z * s_alpha_2;
 }
 
+Quaternion::Quaternion (const Vector4& axis, float angle)
+{
+  float alpha_2 = angle * M_PI / 360;
+  float s_alpha_2 = sin (alpha_2);
+
+  w = cos (alpha_2);
+  x = axis.x * s_alpha_2;
+  y = axis.y * s_alpha_2;
+  z = axis.z * s_alpha_2;
+}
+
 Quaternion::Quaternion (const Vector4& q)
 {
   x = q.x;

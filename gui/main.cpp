@@ -10,6 +10,8 @@
 #include "gpu_pipeline.h"
 #include "math/matrix4.h"
 #include "math/vector3.h"
+#include "math/quaternion.h"
+#include "math/util.h"
 
 using namespace std;
 
@@ -32,10 +34,11 @@ SDLContext SDLContext::_context;
 
 
 Main::Main (int argc, char** argv)
-  : _run (false)
+  : _run (false), _zoom (10.0)
 {
   _window = SDL_CreateWindow ("SimpleCSG", SDL_WINDOWPOS_UNDEFINED,
-    SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT,
+    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
   if (!_window)
     throw CSG::Exception ("Failed to create SDL window");
 
@@ -51,6 +54,7 @@ Main::Main (int argc, char** argv)
   }
 
   _run = true;
+  _aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
 }
 
 Main::~Main ()
@@ -85,54 +89,126 @@ void Main::run ()
   ibo.alloc (e1, sizeof (e1));
 
   Math::Matrix4 model;
-  model.scale (0.5, 0.5, 0.5);
+  //model.scale (0.25, 0.25, 0.25);
 
-  Math::Matrix4 view;
-  view.look_at (Math::Vector3 (0.0, 0.0, 5.0),
-                Math::Vector3 (0.0, 0.0, -1.0),
-                Math::Vector3 (0.0, 1.0, 0.0));
-  gpu.set_view_transform (view);
+  reset_view ();
+  calculate_projection ();
 
   Math::Vector4 color (1.0, 0.0, 0.0, 1.0);
-
-  Math::Matrix4 proj;
-  proj.ortho_projection (-5, 5, -5, 5, -10, 0);
-  gpu.set_projection_transform (proj);
 
   const Shader::InputDef* pos_input = shader.get_input ("vertex");
   const Shader::InputDef* color_input = shader.get_input ("color");
 
+  _redraw = true;
   SDL_Event evt;
 
   while (_run) {
-    gpu.clear ();
+    if (_redraw) {
+      gpu.clear ();
 
-    gpu.bind_shader_input (vbo, *pos_input);
-    gpu.bind_shader_input (color.data (), *color_input);
-    ibo.bind ();
+      gpu.set_model_transform (model);
+      gpu.set_view_transform (_view);
+      gpu.set_projection_transform (_proj);
 
-    gpu.set_model_transform (model);
+      gpu.bind_shader_input (vbo, *pos_input);
+      gpu.bind_shader_input (color.data (), *color_input);
+      ibo.bind ();
 
-    gpu.draw_elements (GL_LINES, 12, 0);
-    //gpu.draw (GL_TRIANGLES, 6);
+      gpu.set_model_transform (model);
+      gpu.set_view_transform (_view);
+
+      gpu.draw_elements (GL_LINES, 12, 0);
+      //gpu.draw_elements (GL_TRIANGLES, 6, 0);
+
+      _redraw = false;
+    }
 
     SDL_GL_SwapWindow (_window);
     SDL_WaitEvent (&evt);
 
     switch (evt.type) {
-      case SDL_QUIT:
-        _run = false;
-        break;
+      case SDL_QUIT: _run = false; break;
+      case SDL_KEYDOWN:
+      case SDL_KEYUP: handle_keyboard (evt.key); break;
+      case SDL_MOUSEMOTION: handle_mouse_motion (evt.motion); break;
     }
   }
 }
 
-void Main::handle_keyboard (int key, int scancode, int action, int mods)
+void Main::handle_keyboard (const SDL_KeyboardEvent& evt)
 {
-  cout << "Keyboard" << endl;
+  if (evt.state == SDL_PRESSED) {
+    switch (evt.keysym.sym) {
+      case SDLK_q: _run = false; break;
+      case SDLK_i: _zoom *= ZOOM_RATE; calculate_projection (); break;
+      case SDLK_o: _zoom /= ZOOM_RATE; calculate_projection (); break;
+    }
+
+    _redraw = true;
+  }
+}
+
+void Main::handle_mouse_motion (const SDL_MouseMotionEvent& evt)
+{
+  switch (evt.state) {
+    case SDL_BUTTON_LMASK: {
+      /* Undo the view transform because we want to rotate about the x and y
+       * axis as seen by the user */
+      Math::Vector4 x_axis = Math::Vector4::x_axis * _view_inv;
+      Math::Vector4 y_axis = Math::Vector4::y_axis * _view_inv;
+
+      Math::Quaternion rot_x (x_axis, evt.yrel);
+      Math::Quaternion rot_y (y_axis, evt.xrel);
+
+      rot_x *= rot_y;
+      Math::Matrix4 rot_m (rot_x);
+      rot_m.transpose ();
+
+      _view = rot_m * _view;
+      _view_inv = _view.inverted ();
+
+      _redraw = true;
+
+      break;
+    }
+
+    case SDL_BUTTON_RMASK: {
+      /* convert number of pixels into clip space then undo projection
+       * transform to get translation in view space */
+      Math::Vector4 trans (
+        Math::f_interpolate (evt.xrel, 0, 0, WINDOW_WIDTH, 2),
+        Math::f_interpolate (-evt.yrel, 0, 0, WINDOW_HEIGHT, 2), 0.0, 1.0);
+      trans *= _proj_inv;
+      /* we don't want to undo the z transform */
+      trans.z = 0;
+      _view.translate (trans);
+      _view_inv = _view.inverted ();
+
+      _redraw = true;
+
+      break;
+    }
+  }
+}
+
+void Main::reset_view ()
+{
+  _view.look_at (Math::Vector3 (0.0, 0.0, 10.0),
+                 Math::Vector3 (0.0, 0.0, -1.0),
+                 Math::Vector3 (0.0, 1.0, 0.0));
+  _view_inv = _view.inverted ();
+}
+
+void Main::calculate_projection ()
+{
+  _proj.ortho_projection (-_aspect * _zoom, _aspect * _zoom, -_zoom, _zoom,
+                          NEAR_CLIP, FAR_CLIP);
+  _proj_inv = _proj.inverted ();
 }
 
 } /* namespace GUI */
+
+
 
 int main (int argc, char** argv)
 {

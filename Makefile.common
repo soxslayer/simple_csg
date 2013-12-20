@@ -1,0 +1,10 @@
+CXX:=g++
+LD:=g++
+AR:=ar
+
+CXXFLAGS:=-Wall -Werror -std=c++11
+CPPFLAGS:=-I$(ROOT)
+ARFLAGS:=rcs
+
+%.d: %.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -M -MG $< | sed 's|\($*.o\):|\1 $@: $(SRC_ROOT)/Makefile |g' > $@

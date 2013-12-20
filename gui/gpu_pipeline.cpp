@@ -9,7 +9,7 @@ namespace GUI
 {
 
 GPUPipeline::Buffer::Buffer (GLenum type)
-  : _type (type)
+  : _type (type), _count (0)
 {
   glGenBuffers (1, &_handle);
 }
@@ -19,17 +19,20 @@ GPUPipeline::Buffer::~Buffer ()
   glDeleteBuffers (1, &_handle);
 }
 
-void GPUPipeline::Buffer::alloc (const void* data, GLsizeiptr size,
-                                       GLenum usage) const
+void GPUPipeline::Buffer::alloc (const void* data, GLsizei count,
+                                 GLsizeiptr item_size, GLenum usage)
 {
   glBindBuffer (_type, _handle);
-  glBufferData (_type, size, data, usage);
+  glBufferData (_type, count * item_size, data, usage);
+  _count = count;
 }
 
-void GPUPipeline::Buffer::set (const void* data, GLsizeiptr size,
-                               GLintptr offset) const
+void GPUPipeline::Buffer::set (const void* data, GLsizei count,
+                               GLsizeiptr item_size, GLintptr offset)
 {
-  glBufferSubData (_handle, offset, size, data);
+  glBindBuffer (_type, _handle);
+  glBufferSubData (_type, offset, count * item_size, data);
+  _count = count;
 }
 
 void GPUPipeline::Buffer::bind () const
@@ -40,6 +43,44 @@ void GPUPipeline::Buffer::bind () const
 void GPUPipeline::Buffer::unbind () const
 {
   glBindBuffer (_type, 0);
+}
+
+
+
+GPUPipeline::VertexBuffer::VertexBuffer (const float* buff, GLsizei count)
+  : Buffer (GL_ARRAY_BUFFER)
+{
+  Buffer::alloc (buff, count, sizeof (float));
+}
+
+void GPUPipeline::VertexBuffer::alloc (const float* buff, GLsizei count)
+{
+  Buffer::alloc (buff, count, sizeof (float));
+}
+
+void GPUPipeline::VertexBuffer::set (const float* buff, GLsizei count,
+                                     GLintptr offset)
+{
+  Buffer::set (buff, count, sizeof (float), offset);
+}
+
+
+
+GPUPipeline::ElementBuffer::ElementBuffer (const short* buff, GLsizei count)
+  : Buffer (GL_ELEMENT_ARRAY_BUFFER)
+{
+  Buffer::alloc (buff, count, sizeof (short));
+}
+
+void GPUPipeline::ElementBuffer::alloc (const short* buff, GLsizei count)
+{
+  Buffer::alloc (buff, count, sizeof (short));
+}
+
+void GPUPipeline::ElementBuffer::set (const short* buff, GLsizei count,
+                                      GLintptr offset)
+{
+  Buffer::set (buff, count, sizeof (short), offset);
 }
 
 
@@ -64,11 +105,21 @@ void GPUPipeline::clear (float r, float g, float b, float a) const
   glClear (GL_COLOR_BUFFER_BIT);
 }
 
+const Shader& GPUPipeline::get_shader () const
+{
+  if (!_shader)
+    throw Exception ("no shader set");
+
+  return *_shader;
+}
+
 void GPUPipeline::set_shader (const Shader& shader)
 {
-  _shader_mvp_input = shader.get_input ("mvp_transform");
+  _shader_mvp_input = &shader.get_input ("mvp_transform");
 
   glUseProgram (shader.get_program ());
+
+  _shader = &shader;
 }
 
 void GPUPipeline::bind_shader_input (void *data, const Shader::InputDef& input,
@@ -133,16 +184,31 @@ void GPUPipeline::bind_shader_input (void *data, const Shader::InputDef& input,
   }
 }
 
+void GPUPipeline::bind_shader_input (void* data, const std::string& input,
+                                     GLsizei stride) const
+{
+  const Shader::InputDef& def = get_shader ().get_input (input);
+  bind_shader_input (data, def, stride);
+}
+
 void GPUPipeline::bind_shader_input (const Buffer& buff,
                                      const Shader::InputDef& input,
                                      long offset, GLsizei stride) const
 {
   if (input.def_type != Shader::InputDef::ATTRIBUTE)
-    throw GPUPipelineInputException (input.name, "invalid type");
+    throw InputException (input.name, "invalid type");
 
   buff.bind ();
   bind_shader_input ((void*)offset, input, stride);
   buff.unbind ();
+}
+
+void GPUPipeline::bind_shader_input (const Buffer& buff,
+                                     const std::string& input, long offset,
+                                     GLsizei stride) const
+{
+  const Shader::InputDef& def = get_shader ().get_input (input);
+  bind_shader_input (buff, def, offset, stride);
 }
 
 void GPUPipeline::draw (GLenum mode, GLsizei count)
@@ -222,15 +288,6 @@ GPUPipeline& GPUPipeline::instance ()
     _instance = new GPUPipeline ();
 
   return *_instance;
-}
-
-
-
-GPUPipelineInputException::GPUPipelineInputException (const std::string& input,
-  const std::string& reason)
-  : CSG::Exception (string ("GPUPipeline input ") + input + string (" ")
-                    + reason)
-{
 }
 
 } /* namespace GUI */

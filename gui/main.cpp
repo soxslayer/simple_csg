@@ -13,6 +13,8 @@
 #include "math/quaternion.h"
 #include "math/util.h"
 
+#include "surface_mesh.h"
+
 using namespace std;
 
 namespace GUI
@@ -65,39 +67,17 @@ Main::~Main ()
 
 void Main::run ()
 {
-  float t1[] = {
-    1.0, 1.0, 0.0, 1.0,
-    1.0, -1.0, 0.0, 1.0,
-    -1.0, 1.0, 0.0, 1.0,
-    -1.0, -1.0, 0.0, 1.0
-  };
-
-  short e1[] = {
-    //0, 1, 2, 1, 2, 3
-    0, 1, 1, 2, 2, 0, 1, 2, 2, 3, 3, 1
-  };
-
-  Shader shader ("../gui/simple.vert", "../gui/simple.frag");
+  Shader shader ("gui/simple.vert", "gui/simple.frag");
   GPUPipeline& gpu = GPUPipeline::instance ();
+  SurfaceMesh m;
 
   gpu.set_shader (shader);
-
-  GPUPipeline::VertexBuffer vbo;
-  vbo.alloc (t1, sizeof (t1));
-
-  GPUPipeline::ElementBuffer ibo;
-  ibo.alloc (e1, sizeof (e1));
 
   Math::Matrix4 model;
   //model.scale (0.25, 0.25, 0.25);
 
   reset_view ();
   calculate_projection ();
-
-  Math::Vector4 color (1.0, 0.0, 0.0, 1.0);
-
-  const Shader::InputDef* pos_input = shader.get_input ("vertex");
-  const Shader::InputDef* color_input = shader.get_input ("color");
 
   _redraw = true;
   SDL_Event evt;
@@ -110,15 +90,7 @@ void Main::run ()
       gpu.set_view_transform (_view);
       gpu.set_projection_transform (_proj);
 
-      gpu.bind_shader_input (vbo, *pos_input);
-      gpu.bind_shader_input (color.data (), *color_input);
-      ibo.bind ();
-
-      gpu.set_model_transform (model);
-      gpu.set_view_transform (_view);
-
-      gpu.draw_elements (GL_LINES, 12, 0);
-      //gpu.draw_elements (GL_TRIANGLES, 6, 0);
+      m.draw ();
 
       _redraw = false;
     }
@@ -210,9 +182,14 @@ void Main::calculate_projection ()
 
 
 
+#include "csg/surface.h"
+#include "csg/volume.h"
+
 int main (int argc, char** argv)
 {
   GUI::Main m (argc, argv);
+  CSG::CircleSurface circle (1.0);
+  CSG::RotateSurfaceVolume sphere (circle);
 
   m.run ();
 

@@ -36,4 +36,14 @@ float f_interpolate (float x, float x0, float y0, float x1, float y1)
   return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
 }
 
+float f_min (float a, float b)
+{
+  return a < b ? a : b;
+}
+
+float f_max (float a, float b)
+{
+  return a > b ? a : b;
+}
+
 } /* namespace Math */

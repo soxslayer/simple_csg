@@ -27,7 +27,10 @@ Vector4::Vector4 (float x, float y, float z, float w)
 Vector4::Vector4 (const Vector3& v)
   : x (_data[0]), y (_data[1]), z (_data[2]), w (_data[3])
 {
-  reset ();
+  x = v.x;
+  y = v.y;
+  z = v.z;
+  w = 1.0;
 }
 
 Vector4::Vector4 (const Vector4& v)
@@ -71,7 +74,7 @@ Vector4 Vector4::normalized ()
 
 float Vector4::length () const
 {
-  return sqrt (x * x + y * y + z * z + w * w);
+  return sqrtf (x * x + y * y + z * z + w * w);
 }
 
 void Vector4::reset ()

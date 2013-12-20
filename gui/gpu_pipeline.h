@@ -3,6 +3,7 @@
 
 #include <string>
 #include <list>
+#include <stdexcept>
 
 #include "shader.h"
 #include "csg/exceptions.h"
@@ -22,15 +23,18 @@ public:
     Buffer (GLenum type);
     virtual ~Buffer ();
 
-    void alloc (const void* data, GLsizeiptr size,
-                GLenum usage = GL_STATIC_DRAW) const;
-    void set (const void* data, GLsizeiptr size, GLintptr offset) const;
+    void alloc (const void* data, GLsizei count, GLsizeiptr item_size,
+                GLenum usage = GL_STATIC_DRAW);
+    void set (const void* data, GLsizei count, GLsizeiptr item_size,
+              GLintptr offset);
     void bind () const;
     void unbind () const;
     GLuint get_handle () const { return _handle; }
+    GLsizei get_count () const { return _count; }
 
   private:
     GLenum _type;
+    GLsizei _count;
     GLuint _handle;
   };
 
@@ -38,22 +42,53 @@ public:
   {
   public:
     VertexBuffer () : Buffer (GL_ARRAY_BUFFER) { }
+    VertexBuffer (const float* buff, GLsizei count);
+
+    void alloc (const float* buff, GLsizei count);
+    void set (const float* buff, GLsizei count, GLintptr offset);
   };
 
   class ElementBuffer : public Buffer
   {
   public:
     ElementBuffer () : Buffer (GL_ELEMENT_ARRAY_BUFFER) { }
+    ElementBuffer (const short* buff, GLsizei count);
+
+    void alloc (const short* buff, GLsizei count);
+    void set (const short* buff, GLsizei count, GLintptr offset);
+  };
+
+  class Exception : public CSG::Exception
+  {
+  public:
+    explicit Exception (const std::string& what)
+      : CSG::Exception (what) { }
+  };
+
+  class InputException : public Exception
+  {
+  public:
+    explicit InputException (const std::string& input,
+                             const std::string& reason)
+      : Exception (std::string ("GPUPipeline input ") + input
+                   + std::string (" ") + reason) { }
+    virtual ~InputException () { }
   };
 
   void set_clear_color (float r, float g, float b, float a);
   void clear () const;
   void clear (float r, float g, float b, float a) const;
+  const Shader& get_shader () const;
   void set_shader (const Shader& shader);
-  void bind_shader_input (void *data, const Shader::InputDef& input,
+  void bind_shader_input (void* data, const Shader::InputDef& input,
+                          GLsizei stride = 0) const;
+  void bind_shader_input (void* data, const std::string& input,
                           GLsizei stride = 0) const;
   void bind_shader_input (const Buffer& buff,
                           const Shader::InputDef& input, long offset = 0,
+                          GLsizei stride = 0) const;
+  void bind_shader_input (const Buffer& buff,
+                          const std::string& input, long offset = 0,
                           GLsizei stride = 0) const;
   void draw (GLenum mode, GLsizei count);
   void draw_elements (GLenum mode, GLsizei count, long offset,
@@ -88,6 +123,7 @@ private:
   Math::Matrix4 _vp_transform;
   bool _vp_dirty;
   const Shader::InputDef* _shader_mvp_input;
+  const Shader* _shader;
 
   GPUPipeline ();
   GPUPipeline (const GPUPipeline& p) { }
@@ -96,14 +132,6 @@ private:
   void calculate_vp_transform ();
 
   static GPUPipeline* _instance;
-};
-
-class GPUPipelineInputException : public CSG::Exception
-{
-public:
-  explicit GPUPipelineInputException (const std::string& input,
-                                      const std::string& reason);
-  virtual ~GPUPipelineInputException () { }
 };
 
 } /* namespace GUI */

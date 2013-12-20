@@ -34,7 +34,7 @@ Shader::Shader (const std::string& vertex_shader_filename,
     GLchar info_str[info_len + 1];
     glGetProgramInfoLog (_program, info_len, nullptr, info_str);
 
-    throw ShaderProgramException (string ("Shader linker error"));
+    throw Exception (string ("Shader linker error"));
   }
 
   glDetachShader (_program, v_shader);
@@ -88,17 +88,17 @@ Shader::~Shader ()
     delete *d;
 }
 
-const Shader::InputDef* Shader::get_input (const string& name) const
+const Shader::InputDef& Shader::get_input (const string& name) const
 {
   auto d = _inputs.begin ();
   auto d_end = _inputs.end ();
 
   for (; d != d_end; ++d) {
     if ((*d)->name == name)
-      return *d;
+      return **d;
   }
 
-  return nullptr;
+  throw Exception ("input " + name + " not found");
 }
 
 GLuint Shader::load_shader (GLenum type, const std::string& filename)
@@ -130,34 +130,10 @@ GLuint Shader::load_shader (GLenum type, const std::string& filename)
     GLchar info_str[info_len + 1];
     glGetShaderInfoLog (shader, info_len, nullptr, info_str);
 
-    throw ShaderException (filename, string (info_str));
+    throw ProgramException (filename, string (info_str));
   }
 
   return shader;
-}
-
-
-
-ShaderException::ShaderException (const std::string& filename,
-                                  const std::string& reason)
-  : CSG::Exception (string ("Shader exception in ") + filename + string (": ")
-                    + reason)
-{
-}
-
-ShaderException::~ShaderException ()
-{
-}
-
-
-
-ShaderProgramException::ShaderProgramException (const std::string& reason)
-  : CSG::Exception (string ("Shader program exception, ") + reason)
-{
-}
-
-ShaderProgramException::~ShaderProgramException ()
-{
 }
 
 } /* namespace GUI */

@@ -3,6 +3,8 @@
 
 #include <ostream>
 
+#include "vector4.h"
+
 namespace Math
 {
 

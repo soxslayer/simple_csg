@@ -44,7 +44,7 @@ void Vector3::reset ()
 
 float Vector3::length () const
 {
-  return sqrt (x * x + y * y + z * z);
+  return sqrtf (x * x + y * y + z * z);
 }
 
 float Vector3::dot_product (const Vector3& v) const
@@ -173,7 +173,7 @@ Vector3 Vector3::operator- () const
 
 std::ostream& operator<< (std::ostream& s, const Vector3& v)
 {
-  s << "[ " << v.x << ',' << v.y << ',' << v.z << " ]";
+  s << "[ " << v.x << ", " << v.y << ", " << v.z << " ]";
   return s;
 }
 

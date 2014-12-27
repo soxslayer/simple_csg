@@ -1,3 +1,13 @@
 *.swp
-build/*
-!build/Makefile
+*.o
+*.deps
+
+*simple_csg
+*.a
+*/Makefile
+*/.Tpo
+configure
+autom4te*
+*.log
+config.*
+Makefile.in

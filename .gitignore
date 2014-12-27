@@ -4,7 +4,7 @@
 
 *simple_csg
 *.a
-*/Makefile
+*Makefile
 */.Tpo
 configure
 autom4te*

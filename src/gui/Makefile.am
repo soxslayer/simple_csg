@@ -2,23 +2,23 @@ include $(top_srcdir)/Makefile.common
 
 bin_PROGRAMS=simple_csg
 
-simple_csg_SOURCES=bbox_mesh.cpp \
-                   debug_mesh.cpp \
-                   drawable.cpp \
-                   gpu_pipeline.cpp \
-                   main.cpp \
-                   marker_mesh.cpp \
-                   mesh.cpp \
-                   mesh_builder.cpp \
-                   shader.cpp \
-                   tango_palette.cpp \
-                   volume_mesh.cpp \
-                   window.cpp
+simple_csg_SOURCES= \
+  bbox_mesh.cpp \
+  debug_mesh.cpp \
+  drawable.cpp \
+  gpu_pipeline.cpp \
+  main.cpp \
+  marker_mesh.cpp \
+  mesh.cpp \
+  mesh_builder.cpp \
+  shader.cpp \
+  tango_palette.cpp \
+  volume_mesh.cpp \
+  window.cpp
 
-simple_csg_DEPENDENCIES=$(top_builddir)/src/math/libmath.a \
-                        $(top_builddir)/src/csg/libcsg.a
+simple_csg_DEPENDENCIES= \
+  $(top_builddir)/src/csg/libcsg.a
 simple_csg_LDADD= \
-  $(top_builddir)/src/math/libmath.a \
   $(top_builddir)/src/csg/libcsg.a \
   $(top_builddir)/src/util/libutil.a
 
